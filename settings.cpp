@@ -77,7 +77,10 @@ qint32 Settings::loadProfile(const QString &file)
         args.clear();
         foreach(QString val, vals)
         {
-            args.append(parseValue(val));
+            QString pVal = parseValue(val);
+            if(args.contains(pVal))
+                continue;
+            args.append(pVal);
         }
     }
 
