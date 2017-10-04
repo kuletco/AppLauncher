@@ -47,18 +47,18 @@ qint32 Settings::loadProfile(const QString &file)
         name = gSettings->value("name").toString();
     if(gSettings->contains("desc"))
         desc = gSettings->value("desc").toString();
-    if(gSettings->contains("icon"))
-        icon = gSettings->value("icon").toString();
     if(gSettings->contains("path"))
         path = gSettings->value("path").toString();
+    if(gSettings->contains("icon"))
+        icon = gSettings->value("icon").toString();
     if(gSettings->contains("exec"))
         exec = gSettings->value("exec").toString();
     else
         return 3;
     gSettings->endGroup();
 
-    icon = parseValue(icon);
     path = parseValue(path);
+    icon = parseValue(icon);
     exec = parseValue(exec);
 
     icon = QDir::toNativeSeparators(path + QDir::toNativeSeparators("\\") + icon);
@@ -87,8 +87,8 @@ qint32 Settings::loadProfile(const QString &file)
     qDebug() << "Application Settings:";
     qDebug() << QString(" name = %1").arg(name);
     qDebug() << QString(" desc = %1").arg(desc);
-    qDebug() << QString(" icon = %1").arg(icon);
     qDebug() << QString(" path = %1").arg(path);
+    qDebug() << QString(" icon = %1").arg(icon);
     qDebug() << QString(" exec = %1").arg(exec);
     qDebug() << QString(" args = %1").arg(args.join(" "));
 
