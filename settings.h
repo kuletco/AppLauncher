@@ -18,8 +18,8 @@ class Settings : public QObject
     QStringList gGroups;
     QString name;
     QString desc;
-    QString icon;
     QString path;
+    QString icon;
     QString exec;
     QStringList args;
 
