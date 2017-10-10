@@ -1,5 +1,5 @@
-#ifndef SUBPROCESS_H
-#define SUBPROCESS_H
+#ifndef _PROCESS_H
+#define _PROCESS_H
 
 #include <QObject>
 #include <QDebug>
@@ -12,13 +12,12 @@
 #include <QMutex>
 #include <QWaitCondition>
 
-
 #ifdef Q_OS_WIN32
 #include <windows.h>
 #include <tlhelp32.h>
 #endif
 
-class SubProcess;
+class Process;
 struct ProcInfo
 {
     bool daemon;
@@ -26,14 +25,14 @@ struct ProcInfo
     qint64 pid;
     qint32 exitcode;
     qint32 errorcode;
-    SubProcess *subproc;
+    Process *process;
 
     ProcInfo()
     {
         pid = 0;
         exitcode =0;
         errorcode = 0;
-        subproc = NULL;
+        process = NULL;
     }
 
     inline bool operator ==(const ProcInfo &pi) const
@@ -49,17 +48,17 @@ inline void registMetaType()
     qRegisterMetaType< QList<ProcInfo> >("QList<ProcInfo>&");
 }
 
-class SubProcess : public QObject
+class Process : public QObject
 {
     Q_OBJECT
-    QStringList subprocs;
-    QProcess *process;
+    QStringList gProcList;
+    QProcess *gProcess;
     QTimer *timer;
     ProcInfo procinfo;
 
 public:
-    SubProcess(ProcInfo &pi, QObject *parent = NULL);
-    ~SubProcess();
+    Process(ProcInfo &pi, QObject *parent = NULL);
+    ~Process();
     bool isRunning();
     static void msleep(qint32 msec);
     qint64 getPid();
@@ -91,4 +90,4 @@ private slots:
     void updateSubProcList();
 };
 
-#endif // SUBPROCESS_H
+#endif // _PROCESS_H

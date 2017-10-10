@@ -1,23 +1,23 @@
-#include "subprocmgr.h"
+#include "processmanager.h"
 
-SubProcMgr::SubProcMgr(QObject *parent) : QObject(parent)
+ProcessManager::ProcessManager(QObject *parent) : QObject(parent)
 {
     proclist.clear();
     gEnv.clear();
 }
 
-SubProcMgr::~SubProcMgr()
+ProcessManager::~ProcessManager()
 {
     stopAll();
     proclist.clear();
 }
 
-void SubProcMgr::setEnv(const QString &name, const QString &value)
+void ProcessManager::setEnv(const QString &name, const QString &value)
 {
     gEnv.insert(name, value);
 }
 
-QUuid SubProcMgr::run(const QString &cmd, bool daemon, bool force)
+QUuid ProcessManager::run(const QString &cmd, bool daemon, bool force)
 {
     QUuid uuid = QUuid::createUuid();
     run(uuid, cmd, daemon, force);
@@ -26,14 +26,14 @@ QUuid SubProcMgr::run(const QString &cmd, bool daemon, bool force)
 }
 
 /* ========== PRIVATE ========== */
-void SubProcMgr::stopAndRemoveProcFromList(ProcInfo &pi, bool stopDaemon)
+void ProcessManager::stopAndRemoveProcFromList(ProcInfo &pi, bool stopDaemon)
 {
-    if(pi.subproc)
+    if(pi.process)
     {
         if(stopDaemon)
-            pi.subproc->stop();
-        delete pi.subproc;
-        pi.subproc = NULL;
+            pi.process->stop();
+        delete pi.process;
+        pi.process = NULL;
     }
 
     if(proclist.contains(pi))
@@ -41,7 +41,7 @@ void SubProcMgr::stopAndRemoveProcFromList(ProcInfo &pi, bool stopDaemon)
 }
 
 /* ========== PUBLIC SLOTS ========== */
-void SubProcMgr::run(QUuid uuid, const QString &cmd, bool daemon, bool force)
+void ProcessManager::run(QUuid uuid, const QString &cmd, bool daemon, bool force)
 {
     if(uuid.isNull())
         return;
@@ -59,22 +59,22 @@ void SubProcMgr::run(QUuid uuid, const QString &cmd, bool daemon, bool force)
 
     qDebug() << "Process UUID:" << pi.uuid.toString() << "CMD:" << cmd << "DAEMON:" << pi.daemon;
 
-    pi.subproc = new SubProcess(pi, this);
-    connect(pi.subproc, SIGNAL(started(ProcInfo)), this, SLOT(pStarted(ProcInfo)));
-    connect(pi.subproc, SIGNAL(stoped(ProcInfo)), this, SLOT(pStoped(ProcInfo)));
-    connect(pi.subproc, SIGNAL(error(ProcInfo,QString)), this, SLOT(pError(ProcInfo,QString)));
-    connect(pi.subproc, SIGNAL(message(ProcInfo,QString)), this, SLOT(pMessage(ProcInfo,QString)));
+    pi.process = new Process(pi, this);
+    connect(pi.process, SIGNAL(started(ProcInfo)), this, SLOT(pStarted(ProcInfo)));
+    connect(pi.process, SIGNAL(stoped(ProcInfo)), this, SLOT(pStoped(ProcInfo)));
+    connect(pi.process, SIGNAL(error(ProcInfo,QString)), this, SLOT(pError(ProcInfo,QString)));
+    connect(pi.process, SIGNAL(message(ProcInfo,QString)), this, SLOT(pMessage(ProcInfo,QString)));
 
     if(!pi.daemon)
         proclist.append(pi);
 
     if(!gEnv.isEmpty())
-        pi.subproc->setEnv(gEnv);
+        pi.process->setEnv(gEnv);
 
-    pi.subproc->run(cmd, pi.daemon, force);
+    pi.process->run(cmd, pi.daemon, force);
 }
 
-void SubProcMgr::stop(qint64 pid)
+void ProcessManager::stop(qint64 pid)
 {
     foreach (ProcInfo pi, proclist)
     {
@@ -86,7 +86,7 @@ void SubProcMgr::stop(qint64 pid)
     }
 }
 
-void SubProcMgr::stop(QUuid uuid)
+void ProcessManager::stop(QUuid uuid)
 {
     foreach (ProcInfo pi, proclist)
     {
@@ -98,7 +98,7 @@ void SubProcMgr::stop(QUuid uuid)
     }
 }
 
-void SubProcMgr::stop(const QString &uuid)
+void ProcessManager::stop(const QString &uuid)
 {
     foreach (ProcInfo pi, proclist)
     {
@@ -110,7 +110,7 @@ void SubProcMgr::stop(const QString &uuid)
     }
 }
 
-void SubProcMgr::stopAll()
+void ProcessManager::stopAll()
 {
     foreach (ProcInfo pi, proclist)
     {
@@ -119,7 +119,7 @@ void SubProcMgr::stopAll()
 }
 
 /* ========== PRIVATE SLOTS ========== */
-void SubProcMgr::pStarted(ProcInfo pi)
+void ProcessManager::pStarted(ProcInfo pi)
 {
     qDebug() << "Process UUID:" << pi.uuid.toString() << "PID:" << pi.pid << "DAEMON:" << pi.daemon;
 
@@ -127,7 +127,7 @@ void SubProcMgr::pStarted(ProcInfo pi)
     emit started(pi.uuid);
 }
 
-void SubProcMgr::pStoped(ProcInfo pi)
+void ProcessManager::pStoped(ProcInfo pi)
 {
     qDebug() << "Process UUID:" << pi.uuid.toString() << "ExitCode:" << pi.exitcode;
 
@@ -140,7 +140,7 @@ void SubProcMgr::pStoped(ProcInfo pi)
         emit allExited(pi.exitcode);
 }
 
-void SubProcMgr::pError(ProcInfo pi, QString errorstr)
+void ProcessManager::pError(ProcInfo pi, QString errorstr)
 {
     qCritical() << "Process UUID:" << pi.uuid.toString() << "ErrorCode:" << pi.errorcode << errorstr;
 
@@ -153,7 +153,7 @@ void SubProcMgr::pError(ProcInfo pi, QString errorstr)
         emit allExited(pi.errorcode);
 }
 
-void SubProcMgr::pMessage(ProcInfo pi, QString msg)
+void ProcessManager::pMessage(ProcInfo pi, QString msg)
 {
     //qDebug() << "Process UUID:" << pi.uuid.toString() << "MSG:" << msg;
 

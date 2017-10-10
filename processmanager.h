@@ -1,20 +1,20 @@
-#ifndef SUBPROCMGR_H
-#define SUBPROCMGR_H
+#ifndef _PROCESSMANAGER_H
+#define _PROCESSMANAGER_H
 
 #include <QObject>
 #include <QList>
 #include <QMetaType>
 
-#include "subprocess.h"
+#include "process.h"
 
-class SubProcMgr : public QObject
+class ProcessManager : public QObject
 {
     Q_OBJECT
     QList<ProcInfo> proclist;
     QProcessEnvironment gEnv;
 public:
-    SubProcMgr(QObject *parent = NULL);
-    ~SubProcMgr();
+    ProcessManager(QObject *parent = NULL);
+    ~ProcessManager();
     void setEnv(const QString &name, const QString &value);
     QUuid run(const QString &cmd, bool daemon = false, bool force = false);
 
@@ -46,4 +46,4 @@ private slots:
     void pMessage(ProcInfo pi, QString msg);
 };
 
-#endif // SUBPROCMGR_H
+#endif // _PROCESSMANAGER_H

@@ -6,11 +6,13 @@
 #include <QCoreApplication>
 
 #include "settings.h"
+#include "processmanager.h"
 
 class Controller : public QObject
 {
     Q_OBJECT
     Settings *settings;
+    ProcessManager *procmgr;
 public:
     Controller(QObject *parent = nullptr);
     ~Controller();

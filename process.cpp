@@ -1,26 +1,26 @@
-#include "subprocess.h"
+#include "process.h"
 
 #define UPDATE_SUBPROCS_TIME 2000
 #define STOP_SUBPROCS_WAIT 1000
 
-SubProcess::SubProcess(ProcInfo &pi, QObject *parent) : QObject(parent), process(0), timer(0)
+Process::Process(ProcInfo &pi, QObject *parent) : QObject(parent), gProcess(0), timer(0)
 {
     procinfo = pi;
     procinfo.errorcode = 0;
     procinfo.exitcode = 0;
     procinfo.pid = 0;
 
-    process = new QProcess(this);
-    connect(process, SIGNAL(error(QProcess::ProcessError)), this, SLOT(slotError(QProcess::ProcessError)));
-    connect(process, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(slotFinished(int,QProcess::ExitStatus)));
-    connect(process, SIGNAL(started()), this, SLOT(slotStarted()));
-    connect(process, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
+    gProcess = new QProcess(this);
+    connect(gProcess, SIGNAL(error(QProcess::ProcessError)), this, SLOT(slotError(QProcess::ProcessError)));
+    connect(gProcess, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(slotFinished(int,QProcess::ExitStatus)));
+    connect(gProcess, SIGNAL(started()), this, SLOT(slotStarted()));
+    connect(gProcess, SIGNAL(readyRead()), this, SLOT(slotReadyRead()));
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateSubProcList()));
 }
 
-SubProcess::~SubProcess()
+Process::~Process()
 {
     if(timer)
     {
@@ -29,24 +29,24 @@ SubProcess::~SubProcess()
         delete timer;
         timer = NULL;
     }
-    if(process)
+    if(gProcess)
     {
-        if(QProcess::Running == process->state() && !procinfo.daemon)
-            process->close();
-        delete process;
-        process = NULL;
+        if(QProcess::Running == gProcess->state() && !procinfo.daemon)
+            gProcess->close();
+        delete gProcess;
+        gProcess = NULL;
     }
 }
 
-bool SubProcess::isRunning()
+bool Process::isRunning()
 {
-    if(process && QProcess::Running == process->state())
+    if(gProcess && QProcess::Running == gProcess->state())
         return true;
     else
         return false;
 }
 
-void SubProcess::msleep(qint32 msec)
+void Process::msleep(qint32 msec)
 {
     QMutex mutex;
     mutex.lock();
@@ -55,77 +55,77 @@ void SubProcess::msleep(qint32 msec)
     mutex.unlock();
 }
 
-qint64 SubProcess::getPid()
+qint64 Process::getPid()
 {
     if(!isRunning())
         return -1;
 
 #if QT_VERSION >= 0x050300
-    return process->processId();
+    return gProcess->processId();
 #elif defined Q_OS_WIN32
-    return process->pid()->dwProcessId;
+    return gProcess->pid()->dwProcessId;
 #else
-    return process->pid();
+    return gProcess->pid();
 #endif
 }
 
-QString SubProcess::getEnv(const QString &name)
+QString Process::getEnv(const QString &name)
 {
     QString envstr = "";
 
-    if(process)
+    if(gProcess)
     {
-        QProcessEnvironment env = process->processEnvironment();
+        QProcessEnvironment env = gProcess->processEnvironment();
         envstr = env.value(name);
     }
 
     return envstr;
 }
 
-QStringList SubProcess::getEnv()
+QStringList Process::getEnv()
 {
     QStringList envs;
     envs.clear();
 
-    if(process)
+    if(gProcess)
     {
-        QProcessEnvironment env = process->processEnvironment();
+        QProcessEnvironment env = gProcess->processEnvironment();
         envs = env.toStringList();
     }
 
     return envs;
 }
 
-void SubProcess::setEnv(const QProcessEnvironment &env)
+void Process::setEnv(const QProcessEnvironment &env)
 {
-    if(!process)
+    if(!gProcess)
         return;
 
-    QProcessEnvironment pEnv = process->processEnvironment();
+    QProcessEnvironment pEnv = gProcess->processEnvironment();
     QStringList keys = env.keys();
     foreach (QString key, keys)
     {
         pEnv.insert(key, env.value(key));
     }
-    process->setProcessEnvironment(pEnv);
+    gProcess->setProcessEnvironment(pEnv);
 }
 
-void SubProcess::setEnv(const QString &name, const QString &value)
+void Process::setEnv(const QString &name, const QString &value)
 {
-    if(!process)
+    if(!gProcess)
         return;
 
-    QProcessEnvironment env = process->processEnvironment();
+    QProcessEnvironment env = gProcess->processEnvironment();
     env.insert(name, value);
-    process->setProcessEnvironment(env);
+    gProcess->setProcessEnvironment(env);
 }
 
 /* ========== PRIVATE ========== */
-QString SubProcess::getParentPid(const QString &pid)
+QString Process::getParentPid(const QString &pid)
 {
     QString ppid = QString::Null();
 
-    if(!process)
+    if(!gProcess)
         return ppid;
 
     if(pid.isEmpty())
@@ -157,7 +157,7 @@ QString SubProcess::getParentPid(const QString &pid)
     if(Process32First(h, &pe))
     {
         do {
-            if(pe.th32ProcessID == process->pid()->dwProcessId)
+            if(pe.th32ProcessID == gProcess->pid()->dwProcessId)
             {
                 ppid.setNum(pe.th32ParentProcessID);
                 break;
@@ -171,9 +171,9 @@ QString SubProcess::getParentPid(const QString &pid)
     return ppid;
 }
 
-void SubProcess::findChildrenProc(QStringList &pids, const QString pidstr)
+void Process::findChildrenProc(QStringList &pids, const QString pidstr)
 {
-    if(!process)
+    if(!gProcess)
         return;
 
     if(pids.isEmpty())
@@ -185,22 +185,22 @@ void SubProcess::findChildrenProc(QStringList &pids, const QString pidstr)
         QString pid = iter.next();
         if(pidstr == getParentPid(pid))
         {
-            if(!subprocs.contains(pid))
+            if(!gProcList.contains(pid))
             {
-                subprocs.append(pid);
+                gProcList.append(pid);
                 findChildrenProc(pids, pid);
             }
         }
     }
 }
 
-void SubProcess::stopChildrenProcs()
+void Process::stopChildrenProcs()
 {
     if(!isRunning())
         return;
 
 #if defined Q_OS_LINUX
-    QString pids = subprocs.join(" ");
+    QString pids = gProcList.join(" ");
     QString cmd = QString("kill %1 %2").arg("-SIGTERM").arg(pids);
 #elif defined Q_OS_WIN32
     QString cmd = QString("taskkill.exe /T /F /PID %1").arg(QString::number(getPid()));
@@ -210,7 +210,7 @@ void SubProcess::stopChildrenProcs()
 }
 
 /* ========== PUBLIC SLOTS ========== */
-void SubProcess::run(const QString &cmd, bool daemon, bool force)
+void Process::run(const QString &cmd, bool daemon, bool force)
 {
     if(cmd.isEmpty())
         return;
@@ -224,7 +224,7 @@ void SubProcess::run(const QString &cmd, bool daemon, bool force)
 #if defined Q_OS_WIN32 && QT_VERSION >= 0x050700
     if(bin.contains("cmd.exe") || bin == "cmd")
     {
-        process->setCreateProcessArgumentsModifier([] (QProcess::CreateProcessArguments *args)
+        gProcess->setCreateProcessArgumentsModifier([] (QProcess::CreateProcessArguments *args)
         {
             args->flags |= CREATE_NEW_CONSOLE;
             args->startupInfo->dwFlags &= ~STARTF_USESTDHANDLES;
@@ -239,42 +239,42 @@ void SubProcess::run(const QString &cmd, bool daemon, bool force)
 
     if(daemon)
     {
-        process->startDetached(cmd);
+        gProcess->startDetached(cmd);
         return;
     }
 
-    if(QProcess::NotRunning != process->state() && force == false)
+    if(QProcess::NotRunning != gProcess->state() && force == false)
         return;
 
     stop();
-    process->start(bin, args);
+    gProcess->start(bin, args);
 }
 
-void SubProcess::stop()
+void Process::stop()
 {
-    if(!process)
+    if(!gProcess)
         return;
 
-    if(QProcess::NotRunning == process->state() || procinfo.daemon)
+    if(QProcess::NotRunning == gProcess->state() || procinfo.daemon)
         return;
 
     stopChildrenProcs();
 
-    // Wait for children process exit it self.
+    // Wait for children gProcess exit it self.
     msleep(STOP_SUBPROCS_WAIT);
 
-    if(QProcess::Running == process->state())
+    if(QProcess::Running == gProcess->state())
     {
-        process->terminate();
-        if(QProcess::NotRunning != process->state())
-            process->kill();
+        gProcess->terminate();
+        if(QProcess::NotRunning != gProcess->state())
+            gProcess->kill();
 
-        process->close();
+        gProcess->close();
     }
 }
 
 /* ========== PRIVATE SLOTS ========== */
-void SubProcess::slotError(QProcess::ProcessError err)
+void Process::slotError(QProcess::ProcessError err)
 {
     Q_UNUSED(err)
 
@@ -283,10 +283,10 @@ void SubProcess::slotError(QProcess::ProcessError err)
 
     procinfo.errorcode = err;
 
-    emit error(procinfo, process->errorString());
+    emit error(procinfo, gProcess->errorString());
 }
 
-void SubProcess::slotFinished(int exitCode, QProcess::ExitStatus exitStatus)
+void Process::slotFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     if(timer && timer->isActive())
         timer->stop();
@@ -299,7 +299,7 @@ void SubProcess::slotFinished(int exitCode, QProcess::ExitStatus exitStatus)
     emit stoped(procinfo);
 }
 
-void SubProcess::slotStarted()
+void Process::slotStarted()
 {
 /* Update subprocess list only needed for linux,
  * because taskkill /t can killall the subprocesses at a time */
@@ -313,15 +313,15 @@ void SubProcess::slotStarted()
     emit started(procinfo);
 }
 
-void SubProcess::slotReadyRead()
+void Process::slotReadyRead()
 {
-    QString msg = process->readAll();
+    QString msg = gProcess->readAll();
     //qDebug() << "PROC" << procinfo.pid << "MSG:" << msg;
 
     emit message(procinfo, msg);
 }
 
-void SubProcess::updateSubProcList()
+void Process::updateSubProcList()
 {
 #if defined Q_OS_LINUX
     QString pidstr = QString::number(getPid());
@@ -343,9 +343,9 @@ void SubProcess::updateSubProcList()
     if(Process32First(h, &pe))
     {
         do {
-            if(pe.th32ParentProcessID == process->pid()->dwProcessId)
+            if(pe.th32ParentProcessID == gProcess->pid()->dwProcessId)
             {
-                subprocs.append(QString::number(pe.th32ProcessID));
+                gProcList.append(QString::number(pe.th32ProcessID));
             }
         } while(Process32Next(h, &pe));
     }

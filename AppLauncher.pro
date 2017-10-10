@@ -39,14 +39,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp \
     controller.cpp \
-    subprocmgr.cpp \
-    subprocess.cpp \
-    settings.cpp
+    settings.cpp \
+    process.cpp \
+    processmanager.cpp
 
 HEADERS += \
     controller.h \
-    subprocmgr.h \
-    subprocess.h \
-    settings.h
+    settings.h \
+    process.h \
+    processmanager.h
 
 DISTFILES +=
