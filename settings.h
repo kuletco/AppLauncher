@@ -22,6 +22,8 @@ class Settings : public QObject
     QString icon;
     QString exec;
     QStringList args;
+    bool gCreateDesktopIcon;
+    bool gStartWithSystem;
 
 public:
     Settings(QObject *parent = NULL);
@@ -29,6 +31,14 @@ public:
     ~Settings();
     qint32 getErrCode() { return errcode; }
     qint32 loadProfile(const QString &file = "");
+    QString getAppName() { return name; }
+    QString getAppDesc() { return desc; }
+    QString getAppPath() { return path; }
+    QString getAppIcon() { return icon; }
+    QString getAppExec() { return exec; }
+    QStringList getAppArgs() { return args; }
+    bool isCreateDesktopIcon() { return gCreateDesktopIcon; }
+    bool isStartWithSystem() { return gStartWithSystem; }
 
 private:
     QString getDefaultProfileName();

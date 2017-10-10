@@ -2,6 +2,8 @@
 
 Settings::Settings(QObject *parent) : QObject(parent), gSettings(0)
 {
+    gCreateDesktopIcon = false;
+    gStartWithSystem = false;
     gFile = getDefaultProfileName();
 }
 
@@ -93,13 +95,26 @@ qint32 Settings::loadProfile(const QString &file)
         }
     }
 
+    if(gGroups.contains("Settings"))
+    {
+        gSettings->beginGroup("Settings");
+        qDebug() << gSettings->value("CreateDesktopIcon").toString();
+        if(gSettings->contains("CreateDesktopIcon"))
+            gCreateDesktopIcon = gSettings->value("CreateDesktopIcon").toBool();
+        if(gSettings->contains("StartWithSystem"))
+            gStartWithSystem = gSettings->value("StartWithSystem").toBool();
+        gSettings->endGroup();
+    }
+
     qDebug() << "Application Settings:";
-    qDebug() << QString(" name = %1").arg(name);
-    qDebug() << QString(" desc = %1").arg(desc);
-    qDebug() << QString(" path = %1").arg(path);
-    qDebug() << QString(" icon = %1").arg(icon);
-    qDebug() << QString(" exec = %1").arg(exec);
-    qDebug() << QString(" args = %1").arg(args.join(" "));
+    qDebug() << QString(" Name = %1").arg(name);
+    qDebug() << QString(" Desc = %1").arg(desc);
+    qDebug() << QString(" Path = %1").arg(path);
+    qDebug() << QString(" Icon = %1").arg(icon);
+    qDebug() << QString(" Exec = %1").arg(exec);
+    qDebug() << QString(" Args = %1").arg(args.join(" "));
+    qDebug() << QString(" Create desktop icon: %1").arg(gCreateDesktopIcon?"true":"false");
+    qDebug() << QString(" Startup with system: %1").arg(gStartWithSystem?"true":"false");
 
     return 0;
 }
