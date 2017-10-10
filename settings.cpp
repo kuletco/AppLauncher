@@ -80,6 +80,15 @@ qint32 Settings::loadProfile(const QString &file)
             QString pVal = parseValue(val);
             if(args.contains(pVal))
                 continue;
+            if(pVal.contains("="))
+            {
+                QStringList pVals = pVal.split("=");
+                if(2 == pVals.size())
+                {
+                    pVals[1] = parseValue(pVals[1]);
+                    pVal = pVals.join("=");
+                }
+            }
             args.append(pVal);
         }
     }

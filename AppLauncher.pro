@@ -49,5 +49,4 @@ HEADERS += \
     subprocess.h \
     settings.h
 
-DISTFILES += \
-    AppLauncher.ini
+DISTFILES +=
